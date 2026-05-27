@@ -1,0 +1,32 @@
+<?php
+
+declare(strict_types=1);
+
+$envPath = dirname(__DIR__) . '/.env';
+$env = [];
+if (file_exists($envPath)) {
+    $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if (empty($line) || str_starts_with($line, '#')) continue;
+        
+        $parts = explode('=', $line, 2);
+        if (count($parts) !== 2) continue;
+        
+        $name = trim($parts[0]);
+        $value = trim($parts[1]);
+        $value = trim($value, "\"'");
+        $env[trim($name)] = trim($value);
+        $_ENV[$name] = $value;
+        putenv($name . '=' . $value);
+    }
+}
+
+return [
+    'host'     => $env['DB_HOST'] ?? '127.0.0.1',
+    'port'     => $env['DB_PORT'] ?? '3306',
+    'database' => $env['DB_NAME'] ?? 'nexus_sla',
+    'username' => $env['DB_USER'] ?? 'root',
+    'password' => $env['DB_PASS'] ?? '',
+    'charset'  => 'utf8mb4',
+];

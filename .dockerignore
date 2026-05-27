@@ -1,0 +1,9 @@
+.git
+.gitignore
+.env
+.env.local
+.vscode
+.idea
+node_modules
+storage/backups
+storage/logs

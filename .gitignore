@@ -1,0 +1,11 @@
+/.env
+/.env.local
+/node_modules
+/vendor
+*.log
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
+.editorconfig
+

@@ -1,0 +1,31 @@
+Options -Indexes
+ServerSignature Off
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    RewriteCond %{REQUEST_METHOD} !^(GET|POST|HEAD)$ [NC]
+    RewriteRule .* - [F,L]
+
+    RewriteRule (^|/)\.(?!well-known/) - [F,L]
+    RewriteRule ^(config|storage|database|app|routes)(/|$) - [F,L,NC]
+    RewriteRule "(^|/)(composer\.(json|lock)|package(-lock)?\.json|Dockerfile|docker-compose\.yml)$" - [F,L,NC]
+
+    RewriteCond %{QUERY_STRING} (\.\./|<|>|%3C|%3E|union(\+|%20)select|base64_encode|information_schema|sleep\() [NC]
+    RewriteRule .* - [F,L]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+<FilesMatch "\.(env|ini|log|sql)$">
+    Require all denied
+</FilesMatch>
