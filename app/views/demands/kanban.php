@@ -54,4 +54,3 @@
     overflow: hidden;
 }
 </style>
-<script src="assets/js/kanban.js"></script>

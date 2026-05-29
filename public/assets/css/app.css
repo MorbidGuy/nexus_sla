@@ -151,6 +151,20 @@ h2 { font-size: 1.05rem; margin: 0; }
 .kanban-card > span { color: var(--muted); margin-top: 4px; }
 .card-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .kanban-card.dragging { opacity: .5; }
+.text-cyan { color: #0dcaf0; }
+.detail-box {
+    min-height: 48px;
+    padding: 14px;
+    white-space: pre-wrap;
+    background: rgba(0, 0, 0, .24);
+    border: 1px solid rgba(148, 163, 184, .28);
+    border-radius: 8px;
+}
+.detail-box-warning {
+    background: rgba(245, 158, 11, .06);
+    border-color: rgba(245, 158, 11, .28);
+    color: #fde68a;
+}
 
 .role-row {
     display: flex;

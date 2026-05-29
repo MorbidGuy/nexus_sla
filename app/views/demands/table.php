@@ -46,14 +46,16 @@
                     <?php if (!empty($canManageDemand)): ?>
                         <a class="btn btn-sm btn-outline-light" href="index.php?route=demands/edit&id=<?= (int) $item['id'] ?>">Editar</a>
                         <?php if (($item['status_slug'] ?? '') === 'finalizado'): ?>
-                            <form method="post" action="index.php?route=demands/reopen" class="d-inline">`n                                <?= $csrfField ?? "" ?>
+                            <form method="post" action="index.php?route=demands/reopen" class="d-inline">
+                                <?= $csrfField ?? "" ?>
                                 <input type="hidden" name="id" value="<?= (int) $item['id'] ?>">
                                 <input type="hidden" name="notes" value="Reaberta pelo gestor: demanda não foi concluída.">
                                 <button class="btn btn-sm btn-outline-warning" type="submit">Não concluído</button>
                             </form>
                         <?php endif; ?>
                     <?php elseif (!empty($canWorkDemand)): ?>
-                        <form method="post" action="index.php?route=demands/status" class="d-inline-flex gap-1 align-items-center">`n                            <?= $csrfField ?? "" ?>
+                        <form method="post" action="index.php?route=demands/status" class="d-inline-flex gap-1 align-items-center">
+                            <?= $csrfField ?? "" ?>
                             <input type="hidden" name="id" value="<?= (int) $item['id'] ?>">
                             <input type="hidden" name="notes" value="Atualizado pelo usuário operacional.">
                             <button class="btn btn-sm btn-outline-info" name="status" value="em-andamento" type="submit">Iniciar</button>
@@ -112,14 +114,16 @@
                         <?php if (!empty($canManageDemand)): ?>
                             <a class="btn btn-sm btn-outline-light" href="index.php?route=demands/edit&id=<?= (int) $item['id'] ?>">Editar</a>
                             <?php if (($item['status_slug'] ?? '') === 'finalizado'): ?>
-                                <form method="post" action="index.php?route=demands/reopen" class="d-inline">`n                                <?= $csrfField ?? "" ?>
+                                <form method="post" action="index.php?route=demands/reopen" class="d-inline">
+                                    <?= $csrfField ?? "" ?>
                                     <input type="hidden" name="id" value="<?= (int) $item['id'] ?>">
                                     <input type="hidden" name="notes" value="Reaberta pelo gestor: demanda não foi concluída.">
                                     <button class="btn btn-sm btn-outline-warning" type="submit">Reabrir</button>
                                 </form>
                             <?php endif; ?>
                         <?php elseif (!empty($canWorkDemand)): ?>
-                            <form method="post" action="index.php?route=demands/status" class="d-inline-flex gap-1">`n                                <?= $csrfField ?? "" ?>
+                            <form method="post" action="index.php?route=demands/status" class="d-inline-flex gap-1">
+                                <?= $csrfField ?? "" ?>
                                 <input type="hidden" name="id" value="<?= (int) $item['id'] ?>">
                                 <button class="btn btn-sm btn-outline-info" name="status" value="em-andamento" type="submit">Iniciar</button>
                                 <button class="btn btn-sm btn-outline-success" name="status" value="finalizado" type="submit">Concluir</button>

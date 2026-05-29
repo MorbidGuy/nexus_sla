@@ -116,10 +116,13 @@ final class DemandController extends BaseController
             $this->json(['error' => 'Demanda nao encontrada.']);
         }
 
+        $description = html_entity_decode((string) ($demand['description'] ?? ''), ENT_QUOTES, 'UTF-8');
+        $notes = html_entity_decode((string) ($demand['notes'] ?? 'Sem observacoes.'), ENT_QUOTES, 'UTF-8');
+
         $this->json([
             'title' => $demand['title'],
-            'description' => nl2br(htmlspecialchars($demand['description'])),
-            'notes' => nl2br(htmlspecialchars($demand['notes'] ?? 'Sem observacoes.')),
+            'description' => nl2br(htmlspecialchars($description, ENT_QUOTES, 'UTF-8')),
+            'notes' => nl2br(htmlspecialchars($notes, ENT_QUOTES, 'UTF-8')),
             'client_sector' => $demand['client_sector'],
             'responsible' => $demand['responsible_name'] ?? 'Nao atribuido',
         ]);

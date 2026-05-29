@@ -22,8 +22,8 @@ $currentRoute = $_GET['route'] ?? 'dashboard';
         <aside class="sidebar">
             <div class="brand d-flex justify-content-between align-items-center w-100">
                 <span>Nexus <span>SLA</span></span>
-                <button id="toggle-mute" class="btn btn-sm btn-link text-white p-0 opacity-75" title="Mudar som de notificação">
-                    <span id="mute-icon">🔊</span>
+                <button id="toggle-mute" class="btn btn-sm btn-link text-white p-0 opacity-75" title="Mudar som de notificacao">
+                    <span id="mute-icon">Som on</span>
                 </button>
             </div>
             <nav class="nav flex-column gap-1">

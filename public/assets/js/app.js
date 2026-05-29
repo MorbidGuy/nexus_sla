@@ -1,6 +1,25 @@
 let isMuted = localStorage.getItem('nexus_muted') === 'true';
 let lastMaxDemandId = 0;
-const notificationAudio = new Audio('assets/audio/dingo.wav');
+const notificationAudio = new Audio('assets/audio/ding.wav');
+notificationAudio.preload = 'auto';
+notificationAudio.volume = 0.4;
+let audioUnlocked = localStorage.getItem('nexus_audio_unlocked') === 'true';
+
+function unlockNotificationAudio() {
+    if (audioUnlocked) return;
+
+    notificationAudio.play()
+        .then(() => {
+            notificationAudio.pause();
+            notificationAudio.currentTime = 0;
+            audioUnlocked = true;
+            localStorage.setItem('nexus_audio_unlocked', 'true');
+        })
+        .catch(() => {});
+}
+
+document.addEventListener('pointerdown', unlockNotificationAudio, { once: true });
+document.addEventListener('keydown', unlockNotificationAudio, { once: true });
 
 function updateSlaCounters() {
     document.querySelectorAll('.sla-counter').forEach((counter) => {
@@ -28,7 +47,7 @@ setInterval(updateSlaCounters, 60000);
 document.addEventListener('click', function(e) {
     const demandTarget = e.target.closest('[data-demand-id]');
     const isAction = e.target.closest('a, button, input, select, .dropdown, .no-details');
-    
+
     if (demandTarget && !isAction) {
         const id = demandTarget.getAttribute('data-demand-id');
         const modalElement = document.getElementById('modalDetalhes');
@@ -37,19 +56,17 @@ document.addEventListener('click', function(e) {
         const detailModal = bootstrap.Modal.getOrCreateInstance(modalElement);
         demandTarget.style.opacity = '0.5';
 
-        fetch(`index.php?route=demands/details&id=${id}`)
+        fetch(`index.php?route=demands/details&id=${encodeURIComponent(id)}`)
             .then(res => res.json())
             .then(data => {
                 demandTarget.style.opacity = '1';
                 if (data.error) return;
-                document.getElementById('modalTitulo').innerText = data.title;
-                document.getElementById('modalDescricao').innerHTML = data.description;
-                document.getElementById('modalObservacoes').innerHTML = data.notes;
-                document.getElementById('modalSetor').innerText = data.client_sector;
-                document.getElementById('modalResponsavel').innerText = data.responsible;
+                fillDemandModal(data, id);
                 detailModal.show();
             })
-            .catch(() => demandTarget.style.opacity = '1');
+            .catch(() => {
+                demandTarget.style.opacity = '1';
+            });
         return;
     }
 
@@ -60,15 +77,32 @@ document.addEventListener('click', function(e) {
 
         const isExternal = link.hostname !== window.location.hostname;
         const isSpecial = href.includes('logout') || link.target === '_blank' || link.classList.contains('no-spa');
-        
+        if (isExternal || isSpecial) return;
+
         e.preventDefault();
         navigateTo(link.href);
     }
 });
 
+function fillDemandModal(data, id) {
+    const title = document.getElementById('modalTitulo');
+    const description = document.getElementById('modalDescricao');
+    const notes = document.getElementById('modalObservacoes');
+    const sector = document.getElementById('modalSetor');
+    const responsible = document.getElementById('modalResponsavel');
+    const editLink = document.getElementById('modalEditarDemanda');
+
+    if (title) title.innerText = data.title || 'Demanda';
+    if (description) description.innerHTML = data.description || 'Sem descricao.';
+    if (notes) notes.innerHTML = data.notes || 'Sem observacoes.';
+    if (sector) sector.innerText = data.client_sector || '-';
+    if (responsible) responsible.innerText = data.responsible || 'Nao atribuido';
+    if (editLink) editLink.href = `index.php?route=demands/edit&id=${encodeURIComponent(id)}`;
+}
+
 function navigateTo(url) {
     const mainContent = document.querySelector('#main-content');
-    if (mainContent) mainContent.style.opacity = '0'; 
+    if (mainContent) mainContent.style.opacity = '0';
 
     localStorage.setItem('nexus_last_url', url);
 
@@ -78,28 +112,29 @@ function navigateTo(url) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             const newContent = doc.querySelector('#main-content');
-            
+
             if (newContent) {
                 mainContent.innerHTML = newContent.innerHTML;
                 document.title = doc.title;
                 window.history.pushState({}, '', url);
                 initAllComponents();
                 updateSidebarActive(url);
-                
-                setTimeout(() => { mainContent.style.opacity = '1'; }, 50);
+
+                setTimeout(() => {
+                    mainContent.style.opacity = '1';
+                }, 50);
             } else {
                 window.location.href = url;
             }
         })
         .catch(err => {
-            console.error('Erro na navegação:', err);
+            console.error('Erro na navegacao:', err);
             if (mainContent) mainContent.style.opacity = '1';
-            window.location.href = url; 
+            window.location.href = url;
         });
 }
 
-
- function updateSidebarActive(url) {
+function updateSidebarActive(url) {
     const urlObj = new URL(url, window.location.origin);
     const route = urlObj.searchParams.get('route') || 'dashboard';
 
@@ -112,16 +147,19 @@ function navigateTo(url) {
 
 function initAllComponents() {
     updateSlaCounters();
+    initSourceProtection();
 
-    const ids = Array.from(document.querySelectorAll('[data-demand-id]')).map(el => parseInt(el.dataset.demandId));
+    const ids = Array.from(document.querySelectorAll('[data-demand-id]')).map(el => parseInt(el.dataset.demandId, 10));
     if (ids.length > 0) {
-        lastMaxDemandId = Math.max(...ids);
+        lastMaxDemandId = Math.max(lastMaxDemandId, ...ids);
+        localStorage.setItem('nexus_last_id', String(lastMaxDemandId));
     }
 
     const mainContent = document.querySelector('#main-content');
     if (mainContent) {
         mainContent.style.transition = 'opacity 0.3s ease-in-out';
     }
+
     if (typeof initKanbanDragDrop === 'function') initKanbanDragDrop();
 }
 
@@ -131,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const muteIcon = document.getElementById('mute-icon');
     const muteBtn = document.getElementById('toggle-mute');
     if (muteIcon && muteBtn) {
-        muteIcon.textContent = isMuted ? '🔇' : '🔊';
+        muteIcon.textContent = isMuted ? 'Som off' : 'Som on';
         muteBtn.classList.toggle('opacity-50', isMuted);
         muteBtn.classList.toggle('opacity-75', !isMuted);
     }
@@ -139,9 +177,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function playNotification() {
     if (isMuted) return;
-    
+
+    notificationAudio.currentTime = 0;
     notificationAudio.play().catch(err => {
-        console.warn('O navegador bloqueou o áudio automático. Interaja com a página primeiro.', err);
+        console.warn('O navegador bloqueou o audio automatico. Interaja com a pagina primeiro.', err);
     });
 }
 
@@ -151,7 +190,7 @@ document.addEventListener('click', function(e) {
         isMuted = !isMuted;
         localStorage.setItem('nexus_muted', isMuted);
         const muteIcon = document.getElementById('mute-icon');
-        if (muteIcon) muteIcon.textContent = isMuted ? '🔇' : '🔊';
+        if (muteIcon) muteIcon.textContent = isMuted ? 'Som off' : 'Som on';
         muteBtn.classList.toggle('opacity-50', isMuted);
         muteBtn.classList.toggle('opacity-75', !isMuted);
     }
@@ -162,7 +201,7 @@ setInterval(() => window.location.reload(), 180000);
 function refreshData() {
     const modalOpen = document.querySelector('.modal.show');
     const isTyping = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName);
-    
+
     if (modalOpen || isTyping) return;
 
     fetch(window.location.href)
@@ -170,34 +209,55 @@ function refreshData() {
         .then(html => {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
-            
-            const selectors = ['.kanban-container', '.table-responsive', '.content-refresh'];
+
+            const selectors = ['.kanban-board', '.table-responsive', '.d-md-none', '.content-refresh'];
             let updated = false;
-            
-            const newIds = Array.from(doc.querySelectorAll('[data-demand-id]')).map(el => parseInt(el.dataset.demandId));
+
+            const newIds = Array.from(doc.querySelectorAll('[data-demand-id]')).map(el => parseInt(el.dataset.demandId, 10));
             if (newIds.length > 0) {
                 const currentMaxId = Math.max(...newIds);
-                if (currentMaxId > lastMaxDemandId) {
-                    lastMaxDemandId = currentMaxId;
+                if (lastMaxDemandId > 0 && currentMaxId > lastMaxDemandId) {
                     playNotification();
                 }
+                lastMaxDemandId = Math.max(lastMaxDemandId, currentMaxId);
+                localStorage.setItem('nexus_last_id', String(lastMaxDemandId));
             }
 
             selectors.forEach(selector => {
                 const newContent = doc.querySelector(selector);
                 const oldContent = document.querySelector(selector);
-                
-                if (newContent && oldContent) {
-                    if (oldContent.innerHTML !== newContent.innerHTML) {
-                        oldContent.innerHTML = newContent.innerHTML;
-                        updated = true;
-                    }
+
+                if (newContent && oldContent && oldContent.innerHTML !== newContent.innerHTML) {
+                    oldContent.innerHTML = newContent.innerHTML;
+                    updated = true;
                 }
             });
 
             if (updated) initAllComponents();
         })
-        .catch(err => console.warn('Erro na atualização automática:', err));
+        .catch(err => console.warn('Erro na atualizacao automatica:', err));
+}
+
+function syncLatestDemandId() {
+    fetch('index.php?route=demands/api_latest', { cache: 'no-store' })
+        .then(response => response.ok ? response.json() : null)
+        .then(data => {
+            if (!data || typeof data.id === 'undefined') return;
+
+            const currentMaxId = parseInt(data.id, 10) || 0;
+            const storedMaxId = parseInt(localStorage.getItem('nexus_last_id') || '0', 10) || 0;
+            const baseline = Math.max(lastMaxDemandId, storedMaxId);
+
+            if (baseline > 0 && currentMaxId > baseline) {
+                playNotification();
+            }
+
+            if (currentMaxId > 0) {
+                lastMaxDemandId = Math.max(lastMaxDemandId, currentMaxId);
+                localStorage.setItem('nexus_last_id', String(lastMaxDemandId));
+            }
+        })
+        .catch(() => {});
 }
 
 window.onpopstate = () => window.location.reload();
@@ -212,4 +272,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+function initSourceProtection() {
+    if (document.body.dataset.sourceProtectionReady === 'true') return;
+    document.body.dataset.sourceProtectionReady = 'true';
+
+    document.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+    });
+
+    document.addEventListener('keydown', (event) => {
+        const key = event.key.toLowerCase();
+        const blocked =
+            event.key === 'F12' ||
+            (event.ctrlKey && event.shiftKey && ['i', 'j', 'c'].includes(key)) ||
+            (event.ctrlKey && ['u', 's'].includes(key));
+
+        if (blocked) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }, true);
+}
+
 setInterval(refreshData, 5000);
+syncLatestDemandId();
+setInterval(syncLatestDemandId, 10000);
