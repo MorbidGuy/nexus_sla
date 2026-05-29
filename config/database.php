@@ -24,10 +24,10 @@ if (file_exists($envPath)) {
 
 // Mapeia todas as variações possíveis de nomes para evitar o erro de conexão
 return [
-    'host'     => $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?? getenv('MYSQLHOST') ?? $env['DB_HOST'] ?? '127.0.0.1',
-    'port'     => $_ENV['DB_PORT'] ?? getenv('DB_PORT') ?? getenv('MYSQLPORT') ?? $env['DB_PORT'] ?? '3306',
-    'database' => $_ENV['DB_DATABASE'] ?? getenv('DB_DATABASE') ?? getenv('MYSQLDATABASE') ?? $env['DB_DATABASE'] ?? $env['DB_NAME'] ?? 'railway',
-    'username' => $_ENV['DB_USERNAME'] ?? getenv('DB_USERNAME') ?? getenv('MYSQLUSER') ?? $env['DB_USERNAME'] ?? $env['DB_USER'] ?? 'root',
-    'password' => $_ENV['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?? getenv('MYSQLPASSWORD') ?? $env['DB_PASSWORD'] ?? $env['DB_PASS'] ?? '',
+    'host'     => $_ENV['DB_HOST'] ?? getenv('DB_HOST') ?: getenv('MYSQLHOST') ?: ($env['DB_HOST'] ?? '127.0.0.1'),
+    'port'     => $_ENV['DB_PORT'] ?? getenv('DB_PORT') ?: getenv('MYSQLPORT') ?: ($env['DB_PORT'] ?? '3306'),
+    'database' => $_ENV['DB_DATABASE'] ?? getenv('DB_DATABASE') ?: getenv('MYSQLDATABASE') ?: ($env['DB_DATABASE'] ?? ($env['DB_NAME'] ?? 'railway')),
+    'username' => $_ENV['DB_USERNAME'] ?? getenv('DB_USERNAME') ?: getenv('MYSQLUSER') ?: ($env['DB_USERNAME'] ?? ($env['DB_USER'] ?? 'root')),
+    'password' => $_ENV['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?: getenv('MYSQLPASSWORD') ?: ($env['DB_PASSWORD'] ?? ($env['DB_PASS'] ?? '')),
     'charset'  => 'utf8mb4',
 ];
