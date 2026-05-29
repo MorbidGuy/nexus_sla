@@ -24,6 +24,6 @@
   ],
   "env": {
     "APP_ENV": "production",
-    "APP_DEBUG": "0"
+    "APP_DEBUG": "1"
   }
 }

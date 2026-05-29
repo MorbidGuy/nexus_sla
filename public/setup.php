@@ -85,7 +85,10 @@ try {
             $sql = file_get_contents($sqlFile);
             foreach (explode(';', $sql) as $query) {
                 $query = trim($query);
-                if ($query !== '' && !str_starts_with($query, 'CREATE DATABASE') && !str_starts_with($query, 'USE ')) {
+                if ($query === '') continue;
+                
+                $upperQuery = strtoupper($query);
+                if (!str_starts_with($upperQuery, 'CREATE DATABASE') && !str_starts_with($upperQuery, 'USE ')) {
                     $db->exec($query);
                 }
             }
