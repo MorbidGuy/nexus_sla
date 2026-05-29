@@ -1,10 +1,10 @@
 {
   "version": 2,
   "functions": {
-    "public/index.php": {
+    "api/index.php": {
       "runtime": "vercel-php@0.7.3"
     },
-    "public/setup.php": {
+    "api/setup.php": {
       "runtime": "vercel-php@0.7.3"
     }
   },
@@ -15,11 +15,11 @@
     },
     {
       "src": "/setup",
-      "dest": "public/setup.php"
+      "dest": "api/setup.php"
     },
     {
       "src": "/(.*)",
-      "dest": "public/index.php?route=$1"
+      "dest": "api/index.php?route=$1"
     }
   ],
   "env": {
