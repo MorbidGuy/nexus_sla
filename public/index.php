@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '/config/config.php';
+require_once dirname(__DIR__) . '/config/config.php'; // Ajustado: public -> raiz
 
 if (APP_ENV === 'production') {
     ini_set('display_errors', '0');
@@ -11,9 +11,8 @@ if (APP_ENV === 'production') {
     ini_set('display_errors', '1');
     error_reporting(E_ALL);
 }
-
-ini_set('log_errors', '1');
-ini_set('error_log', APP_ROOT . '/storage/logs/php-error.log');
+ini_set('log_errors', '1'); // Mantém o log de erros ativado
+ini_set('error_log', '/tmp/php-error.log'); // Direciona logs de erro para /tmp
 
 set_exception_handler(static function (Throwable $exception): void {
     error_log('[Unhandled Exception] ' . $exception->getMessage());
@@ -56,16 +55,14 @@ spl_autoload_register(function ($class) {
     }
 });
 
-$storagePath = APP_ROOT . '/storage';
-if (!is_dir($storagePath)) {
-    mkdir($storagePath, 0755, true);
-}
-
-$serverStartedFile = $storagePath . '/server_started_at.txt';
+// O arquivo server_started_at.txt será salvo diretamente em /tmp
+$serverStartedFile = '/tmp/server_started_at.txt';
 if (!is_file($serverStartedFile)) {
-    file_put_contents($serverStartedFile, (string) time());
+    @file_put_contents($serverStartedFile, (string) time());
 }
-$serverStartedAt = (int) trim((string) file_get_contents($serverStartedFile));
+$serverStartedAt = is_readable($serverStartedFile)
+    ? (int) trim((string) file_get_contents($serverStartedFile))
+    : 0;
 $sessionTimeout = SESSION_TIMEOUT_SECONDS;
 $now = time();
 
@@ -99,6 +96,11 @@ try {
     }
 } catch (Exception $e) {
     error_log('[Database] ' . $e->getMessage());
+    if (APP_SETUP_ENABLED) {
+        require APP_ROOT . '/public/setup.php';
+        exit;
+    }
+
     echo APP_DEBUG
         ? 'Erro ao conectar ao banco de dados: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')
         : 'Erro ao conectar ao banco de dados.';

@@ -2,8 +2,13 @@
 
 declare(strict_types=1);
 
-define('APP_ROOT', dirname(__DIR__));
-require APP_ROOT . '/config/config.php';
+if (!defined('APP_ROOT')) {
+    define('APP_ROOT', dirname(__DIR__)); // Ajustado: public -> raiz
+}
+
+if (!defined('APP_NAME')) {
+    require APP_ROOT . '/config/config.php';
+}
 require_once APP_ROOT . '/app/models/Database.php';
 require_once APP_ROOT . '/app/models/Security.php';
 
@@ -30,8 +35,19 @@ $success = '';
 
 try {
     $db = Database::connection();
-    $result = $db->query('SELECT COUNT(*) AS total FROM users');
-    $count = (int) ($result->fetch(PDO::FETCH_ASSOC)['total'] ?? 0);
+    $tableCheck = $db->query("
+        SELECT COUNT(*) AS total
+        FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'users'
+    ");
+    $usersTableExists = (int) ($tableCheck->fetch(PDO::FETCH_ASSOC)['total'] ?? 0) === 1;
+    $count = 0;
+
+    if ($usersTableExists) {
+        $result = $db->query('SELECT COUNT(*) AS total FROM users');
+        $count = (int) ($result->fetch(PDO::FETCH_ASSOC)['total'] ?? 0);
+    }
 
     if ($count > 0) {
         http_response_code(403);
@@ -61,7 +77,7 @@ try {
         }
 
         if ($errors === []) {
-            $sql = file_get_contents(APP_ROOT . '/database/schema.sql');
+            $sql = file_get_contents(APP_ROOT . '/database/railway_init.sql');
             foreach (explode(';', $sql) as $query) {
                 if (trim($query) !== '') {
                     $db->exec($query);
@@ -77,7 +93,7 @@ try {
             ]);
 
             Security::logEvent('setup_success', 'Initial user created', ['ip' => $ip, 'email' => $email]);
-            $success = 'Usuario inicial criado. Desative APP_SETUP_ENABLED e reinicie o container.';
+            $success = 'Usuario inicial criado. Desative APP_SETUP_ENABLED nas variaveis do Railway.';
         } else {
             Security::logEvent('setup_failed', 'Invalid setup payload', ['ip' => $ip]);
         }
