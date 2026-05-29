@@ -77,9 +77,15 @@ try {
         }
 
         if ($errors === []) {
-            $sql = file_get_contents(APP_ROOT . '/database/railway_init.sql');
+            $sqlFile = APP_ROOT . '/database/schema.sql';
+            if (!file_exists($sqlFile)) {
+                throw new RuntimeException("Arquivo de estrutura SQL nao encontrado em: " . $sqlFile);
+            }
+
+            $sql = file_get_contents($sqlFile);
             foreach (explode(';', $sql) as $query) {
-                if (trim($query) !== '') {
+                $query = trim($query);
+                if ($query !== '' && !str_starts_with($query, 'CREATE DATABASE') && !str_starts_with($query, 'USE ')) {
                     $db->exec($query);
                 }
             }
