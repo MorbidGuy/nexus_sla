@@ -108,7 +108,8 @@ try {
 }
 
 $routes = require APP_ROOT . '/routes/web.php';
-$route = trim($_GET['route'] ?? 'dashboard', '/');
+$rawRoute = $_GET['route'] ?? 'dashboard';
+$route = trim(parse_url($rawRoute, PHP_URL_PATH) ?: 'dashboard', '/');
 $method = $_SERVER['REQUEST_METHOD'];
 $allowedMethods = ['GET', 'POST'];
 if (!in_array($method, $allowedMethods, true)) {
