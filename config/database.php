@@ -22,11 +22,12 @@ if (file_exists($envPath)) {
     }
 }
 
+// Suporte automático para variáveis do Railway ou variáveis padrão do .env
 return [
-    'host'     => $env['DB_HOST'] ?? '127.0.0.1',
-    'port'     => $env['DB_PORT'] ?? '3306',
-    'database' => $env['DB_NAME'] ?? 'nexus_sla',
-    'username' => $env['DB_USER'] ?? 'root',
-    'password' => $env['DB_PASS'] ?? '',
+    'host'     => getenv('MYSQLHOST') ?: ($env['DB_HOST'] ?? '127.0.0.1'),
+    'port'     => getenv('MYSQLPORT') ?: ($env['DB_PORT'] ?? '3306'),
+    'database' => getenv('MYSQLDATABASE') ?: ($env['DB_NAME'] ?? 'nexus_sla'),
+    'username' => getenv('MYSQLUSER') ?: ($env['DB_USER'] ?? 'root'),
+    'password' => getenv('MYSQLPASSWORD') ?: ($env['DB_PASS'] ?? ''),
     'charset'  => 'utf8mb4',
 ];
