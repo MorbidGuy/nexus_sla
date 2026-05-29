@@ -8,6 +8,16 @@ final class Database
 
     public static function connection(): PDO
     {
+        // Verifica se a conexão já existe e se ainda está viva
+        if (self::$connection !== null) {
+            try {
+                // Um comando simples para testar se o servidor responde
+                self::$connection->query('SELECT 1');
+            } catch (PDOException $e) {
+                self::$connection = null; // Conexão morreu (2006), força uma nova
+            }
+        }
+
         if (self::$connection === null) {
             $config = require APP_ROOT . '/config/database.php';
 

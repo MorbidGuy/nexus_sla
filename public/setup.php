@@ -89,7 +89,13 @@ try {
                 
                 $upperQuery = strtoupper($query);
                 if (!str_starts_with($upperQuery, 'CREATE DATABASE') && !str_starts_with($upperQuery, 'USE ')) {
-                    $db->exec($query);
+                    try {
+                        $db->exec($query);
+                    } catch (PDOException $e) {
+                        // Se a conexão cair no meio do loop, tenta reconectar uma vez
+                        $db = Database::connection();
+                        $db->exec($query);
+                    }
                 }
             }
 
