@@ -1,5 +1,5 @@
 <?php
-// Script de emergência para injetar o banco na Aiven
+// Script de emergência ajustado para ignorar validação de SSL no setup
 $url = getenv('DATABASE_URL');
 $dbopts = parse_url($url);
 
@@ -10,15 +10,16 @@ $pass = $dbopts["pass"];
 $name = ltrim($dbopts["path"],'/');
 
 try {
+    // Configuração ajustada para ignorar a verificação de certificado SSL
     $pdo = new PDO("mysql:host=$host;port=$port;dbname=$name", $user, $pass, [
-        PDO::MYSQL_ATTR_SSL_CA => true,
-        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
+        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4",
+        PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false, // Isso pula o erro de SSL
     ]);
+    
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
     echo "Conectado ao banco! Iniciando criação de tabelas...<br>";
 
-    // Lê os arquivos SQL da sua pasta database
     $schema = file_get_contents('../database/schema.sql');
     $rbac = file_get_contents('../database/rbac.sql');
 
@@ -35,10 +36,10 @@ try {
     $sql_user = "INSERT IGNORE INTO users (name, email, password, role, active) 
                  VALUES ('Administrador Master', 'admin@admin.com', '$pass_hash', 'administrator', 1)";
     $pdo->exec($sql_user);
-    echo "✅ Usuário mestre criado! (admin@admin.com / admin123)<br>";
+    echo "✅ Usuário mestre criado!<br>";
 
-    echo "<h3>TUDO PRONTO! Pode fechar esta página e ir para o Login.</h3>";
+    echo "<h3>TUDO PRONTO! Agora você pode logar em: admin@admin.com / admin123</h3>";
 
 } catch (Exception $e) {
-    echo "❌ ERRO: " . $e->getMessage();
+    echo "❌ ERRO DE CONEXÃO: " . $e->getMessage();
 }
