@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '/config/config.php'; // Ajustado: public -> raiz
+require_once dirname(__DIR__) . '/config/config.php';
 
 if (APP_ENV === 'production') {
     ini_set('display_errors', '0');
@@ -11,8 +11,9 @@ if (APP_ENV === 'production') {
     ini_set('display_errors', '1');
     error_reporting(E_ALL);
 }
-ini_set('log_errors', '1'); // Mantém o log de erros ativado
-ini_set('error_log', '/tmp/php-error.log'); // Direciona logs de erro para /tmp
+
+ini_set('log_errors', '1');
+ini_set('error_log', APP_ROOT . '/storage/logs/php-error.log');
 
 set_exception_handler(static function (Throwable $exception): void {
     error_log('[Unhandled Exception] ' . $exception->getMessage());
@@ -55,14 +56,16 @@ spl_autoload_register(function ($class) {
     }
 });
 
-// O arquivo server_started_at.txt será salvo diretamente em /tmp
-$serverStartedFile = '/tmp/server_started_at.txt';
-if (!is_file($serverStartedFile)) {
-    @file_put_contents($serverStartedFile, (string) time());
+$storagePath = APP_ROOT . '/storage';
+if (!is_dir($storagePath)) {
+    mkdir($storagePath, 0755, true);
 }
-$serverStartedAt = is_readable($serverStartedFile)
-    ? (int) trim((string) file_get_contents($serverStartedFile))
-    : 0;
+
+$serverStartedFile = $storagePath . '/server_started_at.txt';
+if (!is_file($serverStartedFile)) {
+    file_put_contents($serverStartedFile, (string) time());
+}
+$serverStartedAt = (int) trim((string) file_get_contents($serverStartedFile));
 $sessionTimeout = SESSION_TIMEOUT_SECONDS;
 $now = time();
 
@@ -101,15 +104,15 @@ try {
         exit;
     }
 
+    http_response_code(503);
     echo APP_DEBUG
         ? 'Erro ao conectar ao banco de dados: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8')
-        : 'Erro ao conectar ao banco de dados.';
+        : 'Banco de dados indisponivel. Verifique as variaveis de ambiente e tente novamente.';
     exit;
 }
 
 $routes = require APP_ROOT . '/routes/web.php';
-$rawRoute = $_GET['route'] ?? 'dashboard';
-$route = trim(parse_url($rawRoute, PHP_URL_PATH) ?: 'dashboard', '/');
+$route = trim($_GET['route'] ?? 'dashboard', '/');
 $method = $_SERVER['REQUEST_METHOD'];
 $allowedMethods = ['GET', 'POST'];
 if (!in_array($method, $allowedMethods, true)) {

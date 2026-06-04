@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: nexus-sla
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/status.php
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "0"
+      - key: APP_SETUP_ENABLED
+        value: "0"
+      - key: TRUST_PROXY_HEADERS
+        value: "1"
+      - key: CSRF_CHECK_ORIGIN
+        value: "1"
+      - key: SESSION_TIMEOUT_SECONDS
+        value: "18000"
+      - key: DB_CONNECT_RETRIES
+        value: "8"
+      - key: DB_CONNECT_RETRY_DELAY_MS
+        value: "1000"
+      - key: DATABASE_URL
+        sync: false

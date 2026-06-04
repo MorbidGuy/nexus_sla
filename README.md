@@ -1,45 +1,28 @@
 # Nexus SLA
 
-> **TEM PRESSA?** Veja [COMECE_AQUI.md](COMECE_AQUI.md)
+Aplicacao PHP 8.2 para controle de demandas e SLA, preparada para deploy em Render/Railway usando Docker.
 
-## 🚀 Início em 2 Passos
+## Deploy rapido no Render
 
-1. **Copie `.env.example` para `.env`**
-2. **Duplo clique em `RUN.bat`**
+1. Envie o projeto ao GitHub.
+2. No Render, crie um Web Service a partir do repositorio.
+3. Use Docker e mantenha o `render.yaml`.
+4. Configure `DATABASE_URL` com a URL externa do MySQL/MariaDB.
+5. No primeiro acesso, defina temporariamente `APP_SETUP_ENABLED=1`, acesse `/setup`, crie o administrador e volte para `APP_SETUP_ENABLED=0`.
 
-Pronto! Tudo automático! 🎉
+## Variaveis principais
 
----
+Use `DATABASE_URL` ou as variaveis `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` e `DB_PASS`.
+Para bancos externos que exigem TLS, mantenha `DB_SSL_MODE=required` e informe `DB_SSL_CA` quando o provedor fornecer um certificado CA.
 
-## 📦 O Que Tem Aqui?
+Veja todas as chaves em `.env.example`.
 
-- **RUN.bat** ← Use ESTE arquivo
-- **COMECE_AQUI.md** ← Leia se tiver dúvida
-- **.env** ← Credenciais do MySQL
-- **app/** ← Código da aplicação
-- **database/** ← Scripts SQL
-- **public/** ← Arquivos públicos (CSS, JS)
+## Local
 
----
+Copie `.env.example` para `.env`, preencha as credenciais e rode:
 
-## 🔧 Personalizando
+```sh
+sh RUN.sh
+```
 
-Edite `.env` para mudar:
-- Host do MySQL
-- Porta
-- Nome do banco
-- Usuário e senha
-
----
-
-## ❓ Problemas?
-
-Leia o arquivo `COMECE_AQUI.md` - tem respostas para tudo!
-
----
-
-**Feito para ser fácil. Muito fácil.** ✨
-
-
-
-# Nexus_SLA
+No Windows, use `RUN.bat`.

@@ -2,32 +2,54 @@
 
 declare(strict_types=1);
 
-$envPath = dirname(__DIR__) . '/.env';
-$env = [];
-if (file_exists($envPath)) {
-    $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        $line = trim($line);
-        if (empty($line) || str_starts_with($line, '#')) continue;
-        
-        $parts = explode('=', $line, 2);
-        if (count($parts) !== 2) continue;
-        
-        $name = trim($parts[0]);
-        $value = trim($parts[1]);
-        $value = trim($value, "\"'");
-        $env[trim($name)] = trim($value);
-        $_ENV[$name] = $value;
-        putenv($name . '=' . $value);
+if (!function_exists('nexus_env')) {
+    function nexus_env(string $key, ?string $default = null): ?string
+    {
+        $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+
+        if ($value === false || $value === null || $value === '') {
+            return $default;
+        }
+
+        return (string) $value;
     }
 }
 
-// Mapeia todas as variações possíveis de nomes para evitar o erro de conexão
+$databaseUrl = nexus_env('DATABASE_URL') ?: nexus_env('MYSQL_URL');
+
+if ($databaseUrl) {
+    $parts = parse_url($databaseUrl);
+    if ($parts === false || empty($parts['scheme'])) {
+        throw new RuntimeException('DATABASE_URL invalida.');
+    }
+
+    parse_str($parts['query'] ?? '', $query);
+
+    return [
+        'driver' => str_starts_with($parts['scheme'], 'postgres') ? 'pgsql' : 'mysql',
+        'host' => $parts['host'] ?? '',
+        'port' => isset($parts['port']) ? (string) $parts['port'] : (str_starts_with($parts['scheme'], 'postgres') ? '5432' : '3306'),
+        'database' => isset($parts['path']) ? ltrim($parts['path'], '/') : '',
+        'username' => isset($parts['user']) ? urldecode($parts['user']) : '',
+        'password' => isset($parts['pass']) ? urldecode($parts['pass']) : '',
+        'charset' => nexus_env('DB_CHARSET', 'utf8mb4'),
+        'ssl_mode' => (string) ($query['ssl-mode'] ?? $query['sslmode'] ?? nexus_env('DB_SSL_MODE', '')),
+        'ssl_ca' => nexus_env('DB_SSL_CA'),
+        'connect_retries' => (int) nexus_env('DB_CONNECT_RETRIES', '5'),
+        'connect_retry_delay_ms' => (int) nexus_env('DB_CONNECT_RETRY_DELAY_MS', '750'),
+    ];
+}
+
 return [
-    'host'     => getenv('MYSQLHOST') ?: ($_ENV['DB_HOST'] ?? getenv('DB_HOST') ?: ($env['DB_HOST'] ?? '127.0.0.1')),
-    'port'     => getenv('MYSQLPORT') ?: ($_ENV['DB_PORT'] ?? getenv('DB_PORT') ?: ($env['DB_PORT'] ?? '3306')),
-    'database' => getenv('MYSQLDATABASE') ?: ($_ENV['DB_DATABASE'] ?? getenv('DB_DATABASE') ?: ($env['DB_DATABASE'] ?? ($env['DB_NAME'] ?? 'railway'))),
-    'username' => getenv('MYSQLUSER') ?: ($_ENV['DB_USERNAME'] ?? getenv('DB_USERNAME') ?: ($env['DB_USERNAME'] ?? ($env['DB_USER'] ?? 'root'))),
-    'password' => getenv('MYSQLPASSWORD') ?: ($_ENV['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?: ($env['DB_PASSWORD'] ?? ($env['DB_PASS'] ?? ''))),
-    'charset'  => 'utf8mb4',
+    'driver' => nexus_env('DB_CONNECTION', 'mysql'),
+    'host' => nexus_env('DB_HOST') ?: nexus_env('MYSQLHOST'),
+    'port' => nexus_env('DB_PORT') ?: nexus_env('MYSQLPORT', '3306'),
+    'database' => nexus_env('DB_NAME') ?: nexus_env('DB_DATABASE') ?: nexus_env('MYSQLDATABASE'),
+    'username' => nexus_env('DB_USER') ?: nexus_env('DB_USERNAME') ?: nexus_env('MYSQLUSER'),
+    'password' => nexus_env('DB_PASS') ?: nexus_env('DB_PASSWORD') ?: nexus_env('MYSQLPASSWORD'),
+    'charset' => nexus_env('DB_CHARSET', 'utf8mb4'),
+    'ssl_mode' => nexus_env('DB_SSL_MODE'),
+    'ssl_ca' => nexus_env('DB_SSL_CA'),
+    'connect_retries' => (int) nexus_env('DB_CONNECT_RETRIES', '5'),
+    'connect_retry_delay_ms' => (int) nexus_env('DB_CONNECT_RETRY_DELAY_MS', '750'),
 ];

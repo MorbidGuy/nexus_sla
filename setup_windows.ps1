@@ -26,7 +26,7 @@ Write-Host "Instalação solicitada com sucesso!" -ForegroundColor Green
 Write-Host "--------------------------------------------" -ForegroundColor Green
 Write-Host "IMPORTANTE:" -ForegroundColor White
 Write-Host "1. Você deve REINICIAR o seu terminal/CMD para que os comandos 'php' e 'mysql' sejam reconhecidos." -ForegroundColor White
-Write-Host "2. Certifique-se de configurar a senha do root como 'cicada3301' durante o setup do MySQL." -ForegroundColor White
+Write-Host "2. Configure credenciais fortes fora do codigo e informe DATABASE_URL ou DB_* no .env." -ForegroundColor White
 Write-Host "3. Após reiniciar o terminal, execute o arquivo RUN.bat." -ForegroundColor White
 Write-Host "--------------------------------------------" -ForegroundColor Green
 

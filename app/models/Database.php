@@ -8,50 +8,104 @@ final class Database
 
     public static function connection(): PDO
     {
-        // Verifica se a conexão já existe e se ainda está viva
-        if (self::$connection !== null) {
-            try {
-                // Um comando simples para testar se o servidor responde
-                self::$connection->query('SELECT 1');
-            } catch (PDOException $e) {
-                self::$connection = null; // Conexão morreu (2006), força uma nova
-            }
-        }
-
         if (self::$connection === null) {
             $config = require APP_ROOT . '/config/database.php';
+            self::validateConfig($config);
 
-            $dsn = sprintf(
-                'mysql:host=%s;port=%s;dbname=%s;charset=%s',
-                $config['host'],
-                $config['port'],
-                $config['database'],
-                $config['charset']
-            );
+            $dsn = self::dsn($config);
+            $options = self::options($config);
+            $attempts = max(1, (int) ($config['connect_retries'] ?? 1));
+            $delayMs = max(0, (int) ($config['connect_retry_delay_ms'] ?? 0));
+            $lastException = null;
 
-            try {
-                self::$connection = new PDO(
-                    $dsn,
-                    $config['username'],
-                    $config['password'],
-                    [
-                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                        PDO::ATTR_EMULATE_PREPARES => false,
-                    ]
-                );
-            } catch (PDOException $exception) {
-                error_log('[PDO] ' . $exception->getMessage());
+            for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+                try {
+                    self::$connection = new PDO(
+                        $dsn,
+                        $config['username'],
+                        $config['password'],
+                        $options
+                    );
+                    break;
+                } catch (PDOException $exception) {
+                    $lastException = $exception;
+                    error_log(sprintf('[PDO] attempt %d/%d: %s', $attempt, $attempts, $exception->getMessage()));
 
+                    if ($attempt < $attempts && $delayMs > 0) {
+                        usleep($delayMs * 1000);
+                    }
+                }
+            }
+
+            if (self::$connection === null) {
                 throw new RuntimeException(
-                    APP_DEBUG
-                        ? 'Falha ao conectar no banco: ' . $exception->getMessage()
-                        : 'Falha ao conectar no banco de dados.'
+                    APP_DEBUG && $lastException
+                        ? 'Falha ao conectar no banco: ' . $lastException->getMessage()
+                        : 'Falha ao conectar no banco de dados. Verifique as variaveis de ambiente e tente novamente.'
                 );
             }
         }
 
         return self::$connection;
+    }
+
+    private static function validateConfig(array $config): void
+    {
+        foreach (['host', 'database', 'username'] as $key) {
+            if (empty($config[$key])) {
+                throw new RuntimeException("Variavel de ambiente do banco ausente: {$key}.");
+            }
+        }
+    }
+
+    private static function dsn(array $config): string
+    {
+        if (($config['driver'] ?? 'mysql') === 'pgsql') {
+            $sslMode = (string) ($config['ssl_mode'] ?? '');
+
+            return sprintf(
+                'pgsql:host=%s;port=%s;dbname=%s%s',
+                $config['host'],
+                $config['port'] ?: '5432',
+                $config['database'],
+                $sslMode !== '' ? ';sslmode=' . $sslMode : ''
+            );
+        }
+
+        return sprintf(
+            'mysql:host=%s;port=%s;dbname=%s;charset=%s',
+            $config['host'],
+            $config['port'] ?: '3306',
+            $config['database'],
+            $config['charset'] ?: 'utf8mb4'
+        );
+    }
+
+    private static function options(array $config): array
+    {
+        $options = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_TIMEOUT => 10,
+        ];
+
+        if (($config['driver'] ?? 'mysql') !== 'mysql') {
+            return $options;
+        }
+
+        $sslMode = strtolower((string) ($config['ssl_mode'] ?? ''));
+        $sslCa = (string) ($config['ssl_ca'] ?? '');
+
+        if ($sslCa !== '' && defined('PDO::MYSQL_ATTR_SSL_CA')) {
+            $options[PDO::MYSQL_ATTR_SSL_CA] = $sslCa;
+        }
+
+        if ($sslMode !== '' && $sslMode !== 'disabled' && defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT')) {
+            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = !in_array($sslMode, ['required', 'require', 'preferred'], true);
+        }
+
+        return $options;
     }
 
     public static function storageStats(): array

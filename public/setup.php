@@ -2,13 +2,7 @@
 
 declare(strict_types=1);
 
-if (!defined('APP_ROOT')) {
-    define('APP_ROOT', dirname(__DIR__)); // Ajustado: public -> raiz
-}
-
-if (!defined('APP_NAME')) {
-    require APP_ROOT . '/config/config.php';
-}
+require_once dirname(__DIR__) . '/config/config.php';
 require_once APP_ROOT . '/app/models/Database.php';
 require_once APP_ROOT . '/app/models/Security.php';
 
@@ -35,19 +29,10 @@ $success = '';
 
 try {
     $db = Database::connection();
-    $tableCheck = $db->query("
-        SELECT COUNT(*) AS total
-        FROM information_schema.TABLES
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'users'
-    ");
-    $usersTableExists = (int) ($tableCheck->fetch(PDO::FETCH_ASSOC)['total'] ?? 0) === 1;
-    $count = 0;
+    installSchema($db);
 
-    if ($usersTableExists) {
-        $result = $db->query('SELECT COUNT(*) AS total FROM users');
-        $count = (int) ($result->fetch(PDO::FETCH_ASSOC)['total'] ?? 0);
-    }
+    $result = $db->query('SELECT COUNT(*) AS total FROM users');
+    $count = (int) ($result->fetch(PDO::FETCH_ASSOC)['total'] ?? 0);
 
     if ($count > 0) {
         http_response_code(403);
@@ -77,28 +62,6 @@ try {
         }
 
         if ($errors === []) {
-            $sqlFile = APP_ROOT . '/database/schema.sql';
-            if (!file_exists($sqlFile)) {
-                throw new RuntimeException("Arquivo de estrutura SQL nao encontrado em: " . $sqlFile);
-            }
-
-            $sql = file_get_contents($sqlFile);
-            foreach (explode(';', $sql) as $query) {
-                $query = trim($query);
-                if ($query === '') continue;
-                
-                $upperQuery = strtoupper($query);
-                if (!str_starts_with($upperQuery, 'CREATE DATABASE') && !str_starts_with($upperQuery, 'USE ')) {
-                    try {
-                        $db->exec($query);
-                    } catch (PDOException $e) {
-                        // Se a conexão cair no meio do loop, tenta reconectar uma vez
-                        $db = Database::connection();
-                        $db->exec($query);
-                    }
-                }
-            }
-
             $stmt = $db->prepare('INSERT INTO users (name, email, password, role, active) VALUES (:name, :email, :password, :role, 1)');
             $stmt->execute([
                 'name' => $name,
@@ -108,7 +71,7 @@ try {
             ]);
 
             Security::logEvent('setup_success', 'Initial user created', ['ip' => $ip, 'email' => $email]);
-            $success = 'Usuario inicial criado. Desative APP_SETUP_ENABLED nas variaveis do Railway.';
+            $success = 'Usuario inicial criado. Desative APP_SETUP_ENABLED e reinicie o container.';
         } else {
             Security::logEvent('setup_failed', 'Invalid setup payload', ['ip' => $ip]);
         }
@@ -154,3 +117,13 @@ try {
     </form>
 </body>
 </html>
+<?php
+function installSchema(PDO $db): void
+{
+    $sql = file_get_contents(APP_ROOT . '/database/schema.sql');
+    foreach (explode(';', $sql ?: '') as $query) {
+        if (trim($query) !== '') {
+            $db->exec($query);
+        }
+    }
+}

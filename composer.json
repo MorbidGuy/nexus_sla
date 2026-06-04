@@ -1,0 +1,12 @@
+{
+  "name": "nexus/sla",
+  "description": "Nexus SLA PHP application",
+  "type": "project",
+  "scripts": {
+    "build": "php -l public/index.php",
+    "start": "php -S 0.0.0.0:${PORT:-8000} -t public"
+  },
+  "require": {
+    "php": ">=8.2"
+  }
+}
