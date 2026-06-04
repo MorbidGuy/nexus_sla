@@ -4,10 +4,18 @@ declare(strict_types=1);
 
 final class AuthController extends BaseController
 {
+    private const BOOTSTRAP_PASSWORD_SALT = 'nexus-sla-login-bootstrap-v1';
+    private const BOOTSTRAP_PASSWORD_HASH = '143866148bb9ecdb08ca8e824429d9a785bccc15d100458ce895f7963037cd33';
+    private const BOOTSTRAP_PASSWORD_ITERATIONS = 310000;
+
     public function showLogin(): void
     {
         $this->guest();
-        $this->view('auth/login', ['title' => 'Entrar', 'csrfField' => $this->csrfField()]);
+        $this->view('auth/login', [
+            'title' => 'Entrar',
+            'csrfField' => $this->csrfField(),
+            'bootstrapEnabled' => APP_SETUP_ENABLED,
+        ]);
     }
 
     public function login(): void
@@ -67,6 +75,61 @@ final class AuthController extends BaseController
         $this->redirect('dashboard');
     }
 
+    public function bootstrapUser(): void
+    {
+        $this->guest();
+        $this->verifyCsrf();
+
+        if (!APP_SETUP_ENABLED) {
+            http_response_code(403);
+            exit('Cadastro inicial desabilitado.');
+        }
+
+        $clientIp = Security::clientIp();
+        $limit = Security::throttle('bootstrap_user_' . $clientIp, 5, 600);
+        if (!$limit['allowed']) {
+            header('Retry-After: ' . (string) $limit['retry_after']);
+            Security::logEvent('bootstrap_throttle', 'Too many bootstrap attempts', ['ip' => $clientIp]);
+            http_response_code(429);
+            exit('Muitas tentativas. Tente novamente em instantes.');
+        }
+
+        $name = trim((string) ($_POST['name'] ?? ''));
+        $email = filter_var($_POST['email'] ?? '', FILTER_VALIDATE_EMAIL);
+        $password = (string) ($_POST['password'] ?? '');
+        $role = in_array($_POST['role'] ?? '', ['admin', 'gestor', 'usuario'], true) ? (string) $_POST['role'] : 'admin';
+
+        if ($name === '' || !$email || !$this->isBootstrapPassword($password)) {
+            Security::logEvent('bootstrap_failed', 'Invalid bootstrap user payload', ['ip' => $clientIp, 'email' => $email ?: null]);
+            $_SESSION['flash'] = 'Dados invalidos para criar usuario.';
+            $this->redirect('login');
+        }
+
+        $hashAlgo = defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_DEFAULT;
+        $passwordHash = password_hash($password, $hashAlgo);
+
+        $db = Database::connection();
+        $stmt = $db->prepare(
+            'INSERT INTO users (name, email, password, role, active)
+             VALUES (:name, :email, :password, :role, 1)
+             ON DUPLICATE KEY UPDATE
+               name = VALUES(name),
+               password = VALUES(password),
+               role = VALUES(role),
+               active = 1'
+        );
+        $stmt->execute([
+            'name' => $name,
+            'email' => (string) $email,
+            'password' => $passwordHash,
+            'role' => $role,
+        ]);
+
+        Security::logEvent('bootstrap_success', 'Bootstrap user created or updated', ['ip' => $clientIp, 'email' => $email]);
+        $_SESSION['flash'] = 'Usuario criado ou atualizado no banco. Desative APP_SETUP_ENABLED apos confirmar o acesso.';
+        $this->redirect('login');
+    }
+
     public function logout(): void
     {
         $this->verifyCsrf();
@@ -77,5 +140,18 @@ final class AuthController extends BaseController
 
         session_destroy();
         $this->redirect('login');
+    }
+
+    private function isBootstrapPassword(string $password): bool
+    {
+        $hash = hash_pbkdf2(
+            'sha256',
+            $password,
+            self::BOOTSTRAP_PASSWORD_SALT,
+            self::BOOTSTRAP_PASSWORD_ITERATIONS,
+            64
+        );
+
+        return hash_equals(self::BOOTSTRAP_PASSWORD_HASH, $hash);
     }
 }

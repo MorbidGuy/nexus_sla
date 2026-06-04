@@ -90,10 +90,17 @@ if (!empty($_SESSION['user'])) {
 
 try {
     $db = Database::connection();
+    $route = trim($_GET['route'] ?? 'dashboard', '/');
+    $isBootstrapRoute = in_array($route, ['login', 'login/bootstrap-user'], true);
+
+    if (APP_SETUP_ENABLED && $isBootstrapRoute) {
+        installApplicationSchema($db);
+    }
+
     $result = $db->query('SELECT COUNT(*) as count FROM users');
     $userCount = (int) ($result->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
 
-    if ($userCount === 0) {
+    if ($userCount === 0 && !(APP_SETUP_ENABLED && $isBootstrapRoute)) {
         require APP_ROOT . '/public/setup.php';
         exit;
     }
@@ -112,7 +119,7 @@ try {
 }
 
 $routes = require APP_ROOT . '/routes/web.php';
-$route = trim($_GET['route'] ?? 'dashboard', '/');
+$route = $route ?? trim($_GET['route'] ?? 'dashboard', '/');
 $method = $_SERVER['REQUEST_METHOD'];
 $allowedMethods = ['GET', 'POST'];
 if (!in_array($method, $allowedMethods, true)) {
@@ -145,3 +152,13 @@ if (!isset($routes[$key])) {
 [$controllerName, $action] = $routes[$key];
 $controller = new $controllerName();
 $controller->$action();
+
+function installApplicationSchema(PDO $db): void
+{
+    $sql = file_get_contents(APP_ROOT . '/database/schema.sql');
+    foreach (explode(';', $sql ?: '') as $query) {
+        if (trim($query) !== '') {
+            $db->exec($query);
+        }
+    }
+}

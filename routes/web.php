@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'GET login' => [AuthController::class, 'showLogin'],
     'POST login' => [AuthController::class, 'login'],
+    'POST login/bootstrap-user' => [AuthController::class, 'bootstrapUser'],
     'POST logout' => [AuthController::class, 'logout'],
 
     'GET dashboard' => [DashboardController::class, 'index'],
