@@ -112,24 +112,18 @@ final class Database
     {
         try {
             $pdo = self::connection();
+            $tables = self::mysqlTableMetadata($pdo);
+            $rowsCount = 0;
 
-            $sql = "
-                SELECT
-                    COUNT(*) AS tables_count,
-                    COALESCE(SUM(TABLE_ROWS), 0) AS rows_count,
-                    COALESCE(SUM(DATA_LENGTH), 0) AS data_bytes,
-                    COALESCE(SUM(INDEX_LENGTH), 0) AS index_bytes
-                FROM information_schema.TABLES
-                WHERE TABLE_SCHEMA = DATABASE()
-            ";
+            foreach ($tables as $table) {
+                $rowsCount += self::exactTableRows($pdo, (string) $table['table_name']);
+            }
 
-            $stmt = $pdo->query($sql);
-
-            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [
-                'tables_count' => 0,
-                'rows_count' => 0,
-                'data_bytes' => 0,
-                'index_bytes' => 0,
+            return [
+                'tables_count' => count($tables),
+                'rows_count' => $rowsCount,
+                'data_bytes' => array_sum(array_map(static fn (array $table): int => (int) $table['data_bytes'], $tables)),
+                'index_bytes' => array_sum(array_map(static fn (array $table): int => (int) $table['index_bytes'], $tables)),
             ];
         } catch (Throwable $e) {
             error_log('[storageStats] ' . $e->getMessage());
@@ -147,21 +141,17 @@ final class Database
     {
         try {
             $pdo = self::connection();
+            $tables = self::mysqlTableMetadata($pdo);
 
-            $sql = "
-                SELECT
-                    TABLE_NAME as table_name,
-                    TABLE_ROWS as rows_count,
-                    DATA_LENGTH as data_bytes,
-                    INDEX_LENGTH as index_bytes
-                FROM information_schema.TABLES
-                WHERE TABLE_SCHEMA = DATABASE()
-                ORDER BY DATA_LENGTH DESC
-            ";
+            foreach ($tables as &$table) {
+                $table['rows_count'] = self::exactTableRows($pdo, (string) $table['table_name']);
+                $table['table_rows'] = $table['rows_count'];
+                $table['data_length'] = $table['data_bytes'];
+                $table['index_length'] = $table['index_bytes'];
+            }
+            unset($table);
 
-            $stmt = $pdo->query($sql);
-
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return $tables;
         } catch (Throwable $e) {
             error_log('[tableStats] ' . $e->getMessage());
 
@@ -174,11 +164,17 @@ final class Database
         try {
             $total = disk_total_space('/');
             $free = disk_free_space('/');
+            $total = $total ?: 0;
+            $free = $free ?: 0;
+            $used = max(0, $total - $free);
+            $usedPercent = $total > 0 ? ($used / $total) * 100 : 0.0;
 
             return [
-                'total_bytes' => $total ?: 0,
-                'free_bytes' => $free ?: 0,
-                'used_bytes' => ($total - $free),
+                'total_bytes' => $total,
+                'free_bytes' => $free,
+                'used_bytes' => $used,
+                'used_percent' => $usedPercent,
+                'is_warning' => $usedPercent >= 85.0,
             ];
         } catch (Throwable $e) {
             error_log('[diskStats] ' . $e->getMessage());
@@ -187,7 +183,33 @@ final class Database
                 'total_bytes' => 0,
                 'free_bytes' => 0,
                 'used_bytes' => 0,
+                'used_percent' => 0.0,
+                'is_warning' => false,
             ];
         }
+    }
+
+    private static function mysqlTableMetadata(PDO $pdo): array
+    {
+        $stmt = $pdo->query("
+            SELECT
+                TABLE_NAME AS table_name,
+                COALESCE(DATA_LENGTH, 0) AS data_bytes,
+                COALESCE(INDEX_LENGTH, 0) AS index_bytes
+            FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA = DATABASE()
+            ORDER BY DATA_LENGTH DESC
+        ");
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private static function exactTableRows(PDO $pdo, string $tableName): int
+    {
+        if (!preg_match('/^[A-Za-z0-9_]+$/', $tableName)) {
+            return 0;
+        }
+
+        return (int) $pdo->query("SELECT COUNT(*) FROM `{$tableName}`")->fetchColumn();
     }
 }

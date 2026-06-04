@@ -15,22 +15,22 @@ $formatBytes = static function (int $bytes): string {
 <div class="page-heading">
     <div>
         <span class="eyebrow"><?= htmlspecialchars($roleLabel) ?></span>
-        <h1>Saúde do banco</h1>
+        <h1>Saude do banco</h1>
     </div>
 </div>
 
 <?php if (!empty($diskStats['is_warning'])): ?>
     <div class="alert alert-warning border-0 shadow-sm">
-        Atenção: o disco está com <?= number_format((float) $diskStats['used_percent'], 2, ',', '.') ?>% de uso.
-        Espaço disponível: <?= $formatBytes((int) $diskStats['free_bytes']) ?>.
+        Atencao: o disco esta com <?= number_format((float) ($diskStats['used_percent'] ?? 0), 2, ',', '.') ?>% de uso.
+        Espaco disponivel: <?= $formatBytes((int) ($diskStats['free_bytes'] ?? 0)) ?>.
     </div>
 <?php endif; ?>
 
 <div class="stats-grid">
-    <div class="metric-card"><small>Tabelas</small><strong><?= (int) $storageStats['tables_count'] ?></strong></div>
-    <div class="metric-card"><small>Registros estimados</small><strong><?= (int) $storageStats['rows_count'] ?></strong></div>
-    <div class="metric-card success"><small>Disco livre</small><strong><?= $formatBytes((int) $diskStats['free_bytes']) ?></strong></div>
-    <div class="metric-card warning"><small>Disco usado</small><strong><?= number_format((float) $diskStats['used_percent'], 1, ',', '.') ?>%</strong></div>
+    <div class="metric-card"><small>Tabelas</small><strong><?= (int) ($storageStats['tables_count'] ?? 0) ?></strong></div>
+    <div class="metric-card"><small>Registros</small><strong><?= (int) ($storageStats['rows_count'] ?? 0) ?></strong></div>
+    <div class="metric-card success"><small>Disco livre</small><strong><?= $formatBytes((int) ($diskStats['free_bytes'] ?? 0)) ?></strong></div>
+    <div class="metric-card warning"><small>Disco usado</small><strong><?= number_format((float) ($diskStats['used_percent'] ?? 0), 1, ',', '.') ?>%</strong></div>
     <div class="metric-card purple"><small>Banco</small><strong><?= $formatBytes($totalBytes) ?></strong></div>
 </div>
 
@@ -45,16 +45,16 @@ $formatBytes = static function (int $bytes): string {
                 <th>Tabela</th>
                 <th>Registros</th>
                 <th>Dados</th>
-                <th>Índices</th>
+                <th>Indices</th>
             </tr>
             </thead>
             <tbody>
             <?php foreach ($tableStats as $table): ?>
                 <tr>
                     <td><?= htmlspecialchars($table['table_name']) ?></td>
-                    <td><?= (int) $table['table_rows'] ?></td>
-                    <td><?= $formatBytes((int) $table['data_length']) ?></td>
-                    <td><?= $formatBytes((int) $table['index_length']) ?></td>
+                    <td><?= (int) ($table['rows_count'] ?? $table['table_rows'] ?? 0) ?></td>
+                    <td><?= $formatBytes((int) ($table['data_bytes'] ?? $table['data_length'] ?? 0)) ?></td>
+                    <td><?= $formatBytes((int) ($table['index_bytes'] ?? $table['index_length'] ?? 0)) ?></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

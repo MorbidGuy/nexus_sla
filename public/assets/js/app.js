@@ -56,7 +56,7 @@ document.addEventListener('click', function(e) {
         const detailModal = bootstrap.Modal.getOrCreateInstance(modalElement);
         demandTarget.style.opacity = '0.5';
 
-        fetch(`index.php?route=demands/details&id=${encodeURIComponent(id)}`)
+        fetch(`index.php?route=demands/details&id=${encodeURIComponent(id)}`, { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 demandTarget.style.opacity = '1';
@@ -104,9 +104,7 @@ function navigateTo(url) {
     const mainContent = document.querySelector('#main-content');
     if (mainContent) mainContent.style.opacity = '0';
 
-    localStorage.setItem('nexus_last_url', url);
-
-    fetch(url)
+    fetch(url, { cache: 'no-store' })
         .then(res => res.text())
         .then(html => {
             const parser = new DOMParser();
@@ -204,13 +202,13 @@ function refreshData() {
 
     if (modalOpen || isTyping) return;
 
-    fetch(window.location.href)
+    fetch(window.location.href, { cache: 'no-store' })
         .then(response => response.text())
         .then(html => {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
 
-            const selectors = ['.kanban-board', '.table-responsive', '.d-md-none', '.content-refresh'];
+            const selectors = ['.kanban-board', '.table-responsive', '.d-md-none', '.content-refresh', '.stats-grid'];
             let updated = false;
 
             const newIds = Array.from(doc.querySelectorAll('[data-demand-id]')).map(el => parseInt(el.dataset.demandId, 10));
@@ -224,13 +222,16 @@ function refreshData() {
             }
 
             selectors.forEach(selector => {
-                const newContent = doc.querySelector(selector);
-                const oldContent = document.querySelector(selector);
+                const newNodes = Array.from(doc.querySelectorAll(selector));
+                const oldNodes = Array.from(document.querySelectorAll(selector));
 
-                if (newContent && oldContent && oldContent.innerHTML !== newContent.innerHTML) {
-                    oldContent.innerHTML = newContent.innerHTML;
-                    updated = true;
-                }
+                oldNodes.forEach((oldContent, index) => {
+                    const newContent = newNodes[index];
+                    if (newContent && oldContent.innerHTML !== newContent.innerHTML) {
+                        oldContent.innerHTML = newContent.innerHTML;
+                        updated = true;
+                    }
+                });
             });
 
             if (updated) initAllComponents();
@@ -261,16 +262,6 @@ function syncLatestDemandId() {
 }
 
 window.onpopstate = () => window.location.reload();
-
-document.addEventListener('DOMContentLoaded', () => {
-    const lastUrl = localStorage.getItem('nexus_last_url');
-    const currentUrl = window.location.href;
-    const isBaseUrl = !window.location.search;
-
-    if (isBaseUrl && lastUrl && lastUrl !== currentUrl && !currentUrl.includes('logout')) {
-        navigateTo(lastUrl);
-    }
-});
 
 function initSourceProtection() {
     if (document.body.dataset.sourceProtectionReady === 'true') return;

@@ -38,6 +38,8 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
 header('X-Permitted-Cross-Domain-Policies: none');
 header('X-Robots-Tag: noindex, nofollow');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
 if (IS_HTTPS) {
     header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
 }

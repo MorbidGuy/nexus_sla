@@ -40,6 +40,7 @@ function initKanbanDragDrop() {
             try {
                 const response = await fetch('index.php?route=kanban/update-status', {
                     method: 'POST',
+                    cache: 'no-store',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body,
                 });
