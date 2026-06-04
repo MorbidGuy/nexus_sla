@@ -91,16 +91,16 @@ if (!empty($_SESSION['user'])) {
 try {
     $db = Database::connection();
     $route = trim($_GET['route'] ?? 'dashboard', '/');
-    $isBootstrapRoute = in_array($route, ['login', 'login/bootstrap-user'], true);
+    $isManagerSignupRoute = in_array($route, ['login', 'login/manager-user'], true);
 
-    if (APP_SETUP_ENABLED && $isBootstrapRoute) {
+    if ($isManagerSignupRoute) {
         installApplicationSchema($db);
     }
 
     $result = $db->query('SELECT COUNT(*) as count FROM users');
     $userCount = (int) ($result->fetch(PDO::FETCH_ASSOC)['count'] ?? 0);
 
-    if ($userCount === 0 && !(APP_SETUP_ENABLED && $isBootstrapRoute)) {
+    if ($userCount === 0 && !$isManagerSignupRoute) {
         require APP_ROOT . '/public/setup.php';
         exit;
     }

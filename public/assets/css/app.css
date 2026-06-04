@@ -127,9 +127,50 @@ h2 { font-size: 1.05rem; margin: 0; }
 .chart-item { height: 100%; display: grid; align-items: end; gap: 8px; color: var(--muted); text-align: center; }
 .bar { width: 100%; min-height: 8px; border-radius: 8px 8px 0 0; background: linear-gradient(180deg, var(--primary), var(--primary-dark)); }
 
-.login-wrap { width: min(430px, 92vw); }
+.login-wrap { width: min(480px, 92vw); }
 .login-panel { padding: 32px; }
 .login-panel h1 { font-size: 2rem; }
+
+.manager-signup {
+    border-top: 1px solid var(--border);
+    padding-top: 18px;
+}
+
+.manager-signup-toggle {
+    width: 100%;
+    min-height: 74px;
+    display: grid;
+    gap: 4px;
+    padding: 14px 16px;
+    text-align: left;
+    color: var(--text);
+    background: linear-gradient(135deg, rgba(45, 212, 191, .16), rgba(23, 35, 58, .92));
+    border: 1px solid rgba(45, 212, 191, .34);
+    border-radius: 8px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+
+.manager-signup-toggle span {
+    font-weight: 800;
+}
+
+.manager-signup-toggle small {
+    color: #99f6e4;
+}
+
+.manager-signup-toggle:hover,
+.manager-signup-toggle:focus {
+    border-color: var(--primary);
+    outline: 0;
+}
+
+.manager-signup-form {
+    margin-top: 16px;
+    padding: 18px;
+    background: rgba(15, 23, 42, .62);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
 
 .kanban-board {
     display: grid;

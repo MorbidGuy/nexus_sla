@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 final class AuthController extends BaseController
 {
-    private const BOOTSTRAP_PASSWORD_SALT = 'nexus-sla-login-bootstrap-v1';
-    private const BOOTSTRAP_PASSWORD_HASH = '143866148bb9ecdb08ca8e824429d9a785bccc15d100458ce895f7963037cd33';
-    private const BOOTSTRAP_PASSWORD_ITERATIONS = 310000;
+    private const MANAGER_CONFIRMATION_SALT = 'nexus-sla-login-bootstrap-v1';
+    private const MANAGER_CONFIRMATION_HASH = '143866148bb9ecdb08ca8e824429d9a785bccc15d100458ce895f7963037cd33';
+    private const MANAGER_CONFIRMATION_ITERATIONS = 310000;
 
     public function showLogin(): void
     {
@@ -14,7 +14,6 @@ final class AuthController extends BaseController
         $this->view('auth/login', [
             'title' => 'Entrar',
             'csrfField' => $this->csrfField(),
-            'bootstrapEnabled' => APP_SETUP_ENABLED,
         ]);
     }
 
@@ -75,21 +74,16 @@ final class AuthController extends BaseController
         $this->redirect('dashboard');
     }
 
-    public function bootstrapUser(): void
+    public function createManagerUser(): void
     {
         $this->guest();
         $this->verifyCsrf();
 
-        if (!APP_SETUP_ENABLED) {
-            http_response_code(403);
-            exit('Cadastro inicial desabilitado.');
-        }
-
         $clientIp = Security::clientIp();
-        $limit = Security::throttle('bootstrap_user_' . $clientIp, 5, 600);
+        $limit = Security::throttle('manager_signup_' . $clientIp, 5, 600);
         if (!$limit['allowed']) {
             header('Retry-After: ' . (string) $limit['retry_after']);
-            Security::logEvent('bootstrap_throttle', 'Too many bootstrap attempts', ['ip' => $clientIp]);
+            Security::logEvent('manager_signup_throttle', 'Too many manager signup attempts', ['ip' => $clientIp]);
             http_response_code(429);
             exit('Muitas tentativas. Tente novamente em instantes.');
         }
@@ -97,11 +91,24 @@ final class AuthController extends BaseController
         $name = trim((string) ($_POST['name'] ?? ''));
         $email = filter_var($_POST['email'] ?? '', FILTER_VALIDATE_EMAIL);
         $password = (string) ($_POST['password'] ?? '');
-        $role = in_array($_POST['role'] ?? '', ['admin', 'gestor', 'usuario'], true) ? (string) $_POST['role'] : 'admin';
+        $passwordConfirmation = (string) ($_POST['password_confirmation'] ?? '');
+        $confirmationPassword = (string) ($_POST['manager_confirmation_password'] ?? '');
 
-        if ($name === '' || !$email || !$this->isBootstrapPassword($password)) {
-            Security::logEvent('bootstrap_failed', 'Invalid bootstrap user payload', ['ip' => $clientIp, 'email' => $email ?: null]);
-            $_SESSION['flash'] = 'Dados invalidos para criar usuario.';
+        if ($name === '' || !$email) {
+            Security::logEvent('manager_signup_failed', 'Invalid manager signup identity', ['ip' => $clientIp, 'email' => $email ?: null]);
+            $_SESSION['flash'] = 'Informe nome e e-mail validos para criar o gestor.';
+            $this->redirect('login');
+        }
+
+        if (!$this->isStrongPassword($password) || $password !== $passwordConfirmation) {
+            Security::logEvent('manager_signup_failed', 'Invalid manager signup password', ['ip' => $clientIp, 'email' => $email]);
+            $_SESSION['flash'] = 'A senha do gestor deve ter 12+ caracteres e a confirmacao precisa ser igual.';
+            $this->redirect('login');
+        }
+
+        if (!$this->isManagerConfirmationPassword($confirmationPassword)) {
+            Security::logEvent('manager_signup_failed', 'Invalid manager confirmation password', ['ip' => $clientIp, 'email' => $email]);
+            $_SESSION['flash'] = 'Senha de confirmacao invalida.';
             $this->redirect('login');
         }
 
@@ -122,11 +129,11 @@ final class AuthController extends BaseController
             'name' => $name,
             'email' => (string) $email,
             'password' => $passwordHash,
-            'role' => $role,
+            'role' => 'gestor',
         ]);
 
-        Security::logEvent('bootstrap_success', 'Bootstrap user created or updated', ['ip' => $clientIp, 'email' => $email]);
-        $_SESSION['flash'] = 'Usuario criado ou atualizado no banco. Desative APP_SETUP_ENABLED apos confirmar o acesso.';
+        Security::logEvent('manager_signup_success', 'Manager user created or updated', ['ip' => $clientIp, 'email' => $email]);
+        $_SESSION['flash'] = 'Usuario gestor criado ou atualizado. Agora acesse com o e-mail e senha cadastrados.';
         $this->redirect('login');
     }
 
@@ -142,16 +149,25 @@ final class AuthController extends BaseController
         $this->redirect('login');
     }
 
-    private function isBootstrapPassword(string $password): bool
+    private function isStrongPassword(string $password): bool
+    {
+        return strlen($password) >= 12
+            && preg_match('/[A-Z]/', $password) === 1
+            && preg_match('/[a-z]/', $password) === 1
+            && preg_match('/\d/', $password) === 1
+            && preg_match('/[^a-zA-Z\d]/', $password) === 1;
+    }
+
+    private function isManagerConfirmationPassword(string $password): bool
     {
         $hash = hash_pbkdf2(
             'sha256',
             $password,
-            self::BOOTSTRAP_PASSWORD_SALT,
-            self::BOOTSTRAP_PASSWORD_ITERATIONS,
+            self::MANAGER_CONFIRMATION_SALT,
+            self::MANAGER_CONFIRMATION_ITERATIONS,
             64
         );
 
-        return hash_equals(self::BOOTSTRAP_PASSWORD_HASH, $hash);
+        return hash_equals(self::MANAGER_CONFIRMATION_HASH, $hash);
     }
 }
