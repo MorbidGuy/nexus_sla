@@ -1,6 +1,10 @@
-let isMuted = localStorage.getItem('nexus_muted') === 'true';
+const userRole = document.body.dataset.userRole || '';
+const hasSavedMuted = localStorage.getItem('nexus_muted') !== null;
+let isMuted = hasSavedMuted
+    ? localStorage.getItem('nexus_muted') === 'true'
+    : ['gestor', 'manager'].includes(userRole);
 let lastMaxDemandId = 0;
-const notificationAudio = new Audio('assets/audio/ding.wav');
+const notificationAudio = new Audio('assets/audio/dingo.wav');
 notificationAudio.preload = 'auto';
 notificationAudio.volume = 0.4;
 let audioUnlocked = localStorage.getItem('nexus_audio_unlocked') === 'true';
